@@ -1,0 +1,230 @@
+{
+  "info": {
+    "name": "Emotion Recognition API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Get All Events",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/events/",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Event By Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/events/{{event_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/events/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventName\": \"Ofis Toplantısı\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/events/{{event_id}}",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Event Sessions",
+      "item": [
+        {
+          "name": "Get Session By Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/event-sessions/{{session_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Sessions By Event",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/event-sessions/by-event/{{event_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Session",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/event-sessions/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionName\": \"Sabah Seansı\",\n  \"eventId\": \"{{event_id}}\",\n  \"duration\": 0.0,\n  \"date\": \"2026-04-19T09:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Session Duration",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/event-sessions/{{session_id}}/duration",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duration\": 120.5\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/event-sessions/{{session_id}}",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Captured Emotions",
+      "item": [
+        {
+          "name": "Get Emotions By Session",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/emotions/by-session/{{session_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Count Emotions By Session",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/emotions/count/{{session_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Save Emotion",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/emotions/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emotion\": \"Mutlu\",\n  \"sessionId\": \"{{session_id}}\",\n  \"date\": \"2026-04-19T09:05:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Emotions By Session",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/emotions/by-session/{{session_id}}",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logs",
+      "item": [
+        {
+          "name": "Get All Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/logs/?limit=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", ""],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "Get Log By Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/logs/{{log_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Save Log",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/logs/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exceptionMessage\": \"Kamera bağlantı hatası\",\n  \"exceptionDetail\": \"cv2.VideoCapture(0) açılamadı\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
