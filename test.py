@@ -34,9 +34,6 @@ def main():
     correct_val = 0
     total_val = 0
 
-    print("\nTest başlıyor...")
-    print("-" * 30)
-
     with torch.no_grad():
         for images, labels in val_loader:
             images, labels = images.to(device), labels.to(device)

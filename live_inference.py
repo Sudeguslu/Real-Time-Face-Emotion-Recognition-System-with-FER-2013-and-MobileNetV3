@@ -122,7 +122,7 @@ def main():
 
         # Smoother sayısını yüz sayısına göre ayarla
         while len(smoothers) < len(detections):
-            smoothers.append(EmotionSmoother(window=10, thresh=0.15))
+            smoothers.append(EmotionSmoother(window=10, thresh=0.10))
         if len(smoothers) > len(detections):
             smoothers = smoothers[:len(detections)]
 
