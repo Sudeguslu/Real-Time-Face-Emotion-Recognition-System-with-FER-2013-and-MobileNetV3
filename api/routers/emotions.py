@@ -11,6 +11,7 @@ import mediapipe as mp
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision as mp_vision
 import numpy as np
+from collections import deque
 from fastapi import APIRouter
 from database import EmotionRepository
 from api.schemas.emotion import EmotionCreate, EmotionResponse
@@ -21,25 +22,42 @@ class FrameRequest(BaseModel):
 router = APIRouter(prefix="/emotions", tags=["Captured Emotions"])
 repo = EmotionRepository()
 
+EMOTIONS = ['Kizgin', 'Igrenme', 'Korku', 'Mutlu', 'Notr', 'Uzgun', 'Saskin']
 
-@router.get("/by-session/{session_id}", response_model=list[EmotionResponse])
-def get_by_session(session_id: str):
-    return repo.get_by_session(session_id)
+# ── Smoother (live_inference.py ile aynı) ──
+class EmotionSmoother:
+    def __init__(self, window=10, thresh=0.10):
+        self.thresh       = thresh
+        self.history      = deque(maxlen=window)
+        self.stable_label = None
+        self.stable_score = 0.0
 
+    def update(self, probs, emotions):
+        self.history.append(np.array(probs, dtype=np.float32))
+        smoothed   = np.mean(self.history, axis=0)
+        best_idx   = int(np.argmax(smoothed))
+        best_score = float(smoothed[best_idx])
+        best_label = emotions[best_idx]
 
-@router.get("/count/{session_id}", response_model=dict)
-def count_by_emotion(session_id: str):
-    return repo.count_by_emotion(session_id)
+        if self.stable_label is None:
+            self.stable_label = best_label
+            self.stable_score = best_score
+        else:
+            cur_score = float(smoothed[emotions.index(self.stable_label)])
+            if best_score > cur_score + self.thresh:
+                self.stable_label = best_label
+                self.stable_score = best_score
+            else:
+                self.stable_score = cur_score
 
-@router.delete("/by-session/{session_id}", response_model=dict)
-def delete_by_session(session_id: str):
-    count = repo.delete_by_session(session_id)
-    return {"deleted": count}
+        return self.stable_label, self.stable_score
+
+# Her oturum için ayrı smoother (max 4 yüz)
+_smoothers: list[EmotionSmoother] = []
 
 _model = None
 _face_detector = None
 _transform = None
-EMOTIONS = ['Kizgin', 'Igrenme', 'Korku', 'Mutlu', 'Notr', 'Uzgun', 'Saskin']
 
 def get_model():
     global _model, _transform
@@ -71,8 +89,26 @@ def get_face_detector():
         _face_detector = mp_vision.FaceDetector.create_from_options(options)
     return _face_detector
 
+
+@router.get("/by-session/{session_id}", response_model=list[EmotionResponse])
+def get_by_session(session_id: str):
+    return repo.get_by_session(session_id)
+
+
+@router.get("/count/{session_id}", response_model=dict)
+def count_by_emotion(session_id: str):
+    return repo.count_by_emotion(session_id)
+
+@router.delete("/by-session/{session_id}", response_model=dict)
+def delete_by_session(session_id: str):
+    count = repo.delete_by_session(session_id)
+    return {"deleted": count}
+
+
 @router.post("/analyze-frame", response_model=dict)
 def analyze_frame(body: FrameRequest):
+    global _smoothers
+
     try:
         img_data = base64.b64decode(body.frame)
         pil_img  = Image.open(io.BytesIO(img_data)).convert("RGB")
@@ -85,14 +121,21 @@ def analyze_frame(body: FrameRequest):
     result   = face_detector.detect(mp_image)
 
     if not result.detections:
-        return {"emotion": None, "score": None, "faces": 0}
+        _smoothers = []
+        return {"faces": []}
 
     model, transform = get_model()
     device = next(model.parameters()).device
 
+    # Smoother sayısını yüz sayısına göre ayarla
+    while len(_smoothers) < len(result.detections):
+        _smoothers.append(EmotionSmoother(window=3, thresh=0.0))
+    if len(_smoothers) > len(result.detections):
+        _smoothers = _smoothers[:len(result.detections)]
+
     h, w = np_img.shape[:2]
     faces = []
-    for detection in result.detections:
+    for i, detection in enumerate(result.detections):
         bb = detection.bounding_box
         x1 = max(0, bb.origin_x)
         y1 = max(0, bb.origin_y)
@@ -105,14 +148,17 @@ def analyze_frame(body: FrameRequest):
         with torch.no_grad():
             probs = torch.softmax(model(tensor), dim=1)[0].tolist()
 
-        best_idx = int(np.argmax(probs))
+        # Smoothing + histerez
+        label, score = _smoothers[i].update(probs, EMOTIONS)
+
         faces.append({
-            "emotion": EMOTIONS[best_idx],
-            "score": round(probs[best_idx], 3),
+            "emotion": label,
+            "score": round(score, 3),
             "bbox": {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
         })
 
     return {"faces": faces}
+
 
 @router.post("/", response_model=dict, status_code=201)
 def save_emotion(body: EmotionCreate):

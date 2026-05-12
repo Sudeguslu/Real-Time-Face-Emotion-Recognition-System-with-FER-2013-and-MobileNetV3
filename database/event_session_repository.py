@@ -1,6 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from bson import ObjectId
 from .client import get_db
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+ISTANBUL = ZoneInfo("Europe/Istanbul")
 
 
 class EventSessionRepository:
@@ -12,7 +17,7 @@ class EventSessionRepository:
             "sessionName": session_name,
             "eventId":     event_id,
             "duration":    duration,
-            "date":        date or datetime.now(timezone.utc),
+            "date":        date or datetime.now(ISTANBUL),
         })
         return str(result.inserted_id)
 
@@ -39,4 +44,10 @@ def _serialize(doc: dict | None) -> dict | None:
     if doc is None:
         return None
     doc["id"] = str(doc.pop("_id"))
+    if isinstance(doc.get("date"), datetime):
+        dt = doc["date"]
+        # MongoDB naive datetime döndürüyorsa UTC olarak işaretle
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        doc["date"] = dt.astimezone(ISTANBUL).isoformat()
     return doc
