@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+env/
+.env
+.git/
+dataset/
+train.py
+test.py
+live_inference.py
+*.json
+README.md
